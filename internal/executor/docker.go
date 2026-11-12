@@ -33,6 +33,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/keerthivardhanchandana/online-code-execution-system/internal/models"
 )
@@ -122,21 +123,29 @@ func runInDocker(
 	}
 
 	containerID := resp.ID
-	slog.Debug("container created", "id", containerID[:12], "image", image)
+
+	// Register cleanup immediately, including when startup fails.
+	defer func() {
+		removeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err := cli.ContainerRemove(removeCtx, containerID, container.RemoveOptions{
+			Force: true,
+		})
+		if err != nil && !errdefs.IsNotFound(err) {
+			slog.Warn("container cleanup failed", "id", containerID, "error", err)
+			return
+		}
+
+		slog.Debug("container cleanup complete", "id", containerID)
+	}()
+
+	slog.Debug("container created", "id", containerID, "image", image)
 
 	// Start the container.
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return nil, fmt.Errorf("container start failed: %w", err)
 	}
-
-	// Ensure the container is removed when we are done (cleanup).
-	// AutoRemove only triggers when the container exits; we also force-remove
-	// here to handle cases where we kill it before it exits naturally.
-	defer func() {
-		removeCtx := context.Background()
-		cli.ContainerRemove(removeCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck
-		slog.Debug("container removed", "id", containerID[:12])
-	}()
 
 	// --- Upload source code as tar archive ---
 	// Docker's CopyToContainer API requires a tar stream.
