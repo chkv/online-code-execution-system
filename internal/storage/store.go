@@ -1,18 +1,4 @@
-// Package storage provides the in-memory job store.
-//
-// Why not Redis?
-// Judex uses Redis because it runs as multiple separate processes that need
-// shared state. Our project runs as a single process, so a Go-native in-memory
-// store protected by a sync.RWMutex is sufficient and much simpler.
-//
-// Concurrency safety:
-// Multiple goroutines (the HTTP handler and N worker goroutines) read and write
-// jobs concurrently. Without synchronization, two goroutines could read the same
-// job simultaneously while another goroutine is writing — this is a data race.
-//
-// We use sync.RWMutex:
-//   - Multiple readers can hold the read lock simultaneously (Get calls).
-//   - A write lock is exclusive (Add, Update operations).
+// Package storage provides an in-memory job store.
 package storage
 
 import (
@@ -21,63 +7,65 @@ import (
 	"github.com/keerthivardhanchandana/online-code-execution-system/internal/models"
 )
 
-// Store is a thread-safe in-memory store for Job objects.
-//
-// Shared state: the jobs map is read by the GET /api/jobs/:id handler
-// AND written by worker goroutines when they update job status/results.
-// Without the mutex, these concurrent accesses would cause a race condition.
+// Store keeps job snapshots protected by a mutex.
 type Store struct {
 	mu   sync.RWMutex
-	jobs map[string]*models.Job
+	jobs map[string]models.Job
 }
 
-// NewStore creates and returns an empty Store.
 func NewStore() *Store {
 	return &Store{
-		jobs: make(map[string]*models.Job),
+		jobs: make(map[string]models.Job),
 	}
 }
 
-// Add saves a new job.
-// The write lock ensures no other goroutine can read or write during the operation.
+// Add stores a copy, so later changes to the original job
+// do not modify the stored snapshot.
 func (s *Store) Add(job *models.Job) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.jobs[job.ID] = job
+
+	s.jobs[job.ID] = *job
 }
 
-// Get retrieves a job by ID.
-// The read lock allows multiple concurrent reads, but blocks if a write is happening.
+// Get returns a separate copy for the caller.
 func (s *Store) Get(id string) (*models.Job, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	job, ok := s.jobs[id]
-	return job, ok
+	if !ok {
+		return nil, false
+	}
+
+	return &job, true
 }
 
-// Update replaces an existing job's data.
-// Called by workers to save execution results.
+// Update replaces the stored snapshot with a copy.
 func (s *Store) Update(job *models.Job) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.jobs[job.ID] = job
+
+	s.jobs[job.ID] = *job
 }
 
-// List returns a snapshot of all jobs in the store.
-// We copy the slice to avoid holding the lock while the caller iterates.
+// List returns independent copies of all stored jobs.
 func (s *Store) List() []*models.Job {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	result := make([]*models.Job, 0, len(s.jobs))
 	for _, job := range s.jobs {
-		result = append(result, job)
+		snapshot := job
+		result = append(result, &snapshot)
 	}
+
 	return result
 }
 
-// Count returns the total number of stored jobs.
 func (s *Store) Count() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
+
 	return len(s.jobs)
 }

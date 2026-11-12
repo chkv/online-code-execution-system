@@ -28,6 +28,7 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
@@ -47,8 +48,12 @@ type commandResult struct {
 // dockerClient is a lazily-initialized Docker client shared across executors.
 // It is safe for concurrent use by multiple goroutines (confirmed by Docker SDK docs).
 var dockerClient *client.Client
+var dockerClientMu sync.Mutex
 
 func getDockerClient() (*client.Client, error) {
+	dockerClientMu.Lock()
+	defer dockerClientMu.Unlock()
+
 	if dockerClient != nil {
 		return dockerClient, nil
 	}
@@ -86,7 +91,7 @@ func runInDocker(
 	//   - limited CPU/memory/pids
 	//   - drop all Linux capabilities
 	//   - no new privileges
-	nanoCPUs := int64(5e8) // 0.5 CPU cores
+	nanoCPUs := int64(5e8)             // 0.5 CPU cores
 	memory := int64(128 * 1024 * 1024) // 128 MB
 	pidsLimit := int64(32)
 
