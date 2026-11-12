@@ -1,17 +1,21 @@
 FROM golang:1.25-alpine
 
-# Create non-root user
 RUN adduser -D -u 1000 sandbox
 
+ENV GOCACHE=/var/cache/go-cache \
+    GOPATH=/tmp/gopath \
+    CGO_ENABLED=0 \
+    GOFLAGS="-p=1" \
+    GOMAXPROCS=2
+
 WORKDIR /workspace
-RUN chmod 777 /workspace
 
-# Pre-warm Go module cache to speed up builds
-RUN mkdir -p /var/cache/go-cache && chmod -R 777 /var/cache/go-cache
+RUN mkdir -p /var/cache/go-cache /tmp/gopath && \
+    chown -R sandbox:sandbox /workspace /var/cache/go-cache /tmp/gopath
 
-ENV GOCACHE=/var/cache/go-cache
-ENV GOPATH=/tmp/gopath
+USER sandbox
 
-USER 1000
+# Populate the build cache while creating the image.
+RUN go build std
 
 CMD ["go", "version"]
