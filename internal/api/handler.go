@@ -12,6 +12,8 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -23,6 +25,8 @@ import (
 	"github.com/keerthivardhanchandana/online-code-execution-system/internal/models"
 	"github.com/keerthivardhanchandana/online-code-execution-system/internal/storage"
 )
+
+const maxSubmitBodyBytes int64 = 1 << 20 // 1 MiB
 
 // Handler holds all dependencies for the API handlers.
 // Passing dependencies explicitly (instead of using globals) makes
@@ -67,9 +71,25 @@ func (h *Handler) jobsRouter(w http.ResponseWriter, r *http.Request) {
 // -----------------------------------------------------------------------
 
 func (h *Handler) submitJobHandler(w http.ResponseWriter, r *http.Request) {
+	// Read the complete request within a fixed size limit.
+	r.Body = http.MaxBytesReader(w, r.Body, maxSubmitBodyBytes)
+	defer r.Body.Close()
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		var sizeError *http.MaxBytesError
+		if errors.As(err, &sizeError) {
+			writeError(w, "request body must not exceed 1 MiB", http.StatusRequestEntityTooLarge)
+		} else {
+			slog.Warn("submit: request read failed", "error", err)
+			writeError(w, "invalid request body", http.StatusBadRequest)
+		}
+		return
+	}
+
 	// Parse JSON request body.
 	var req models.SubmitRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.Unmarshal(body, &req); err != nil {
 		slog.Warn("submit: invalid JSON", "error", err)
 		writeError(w, "invalid request body", http.StatusBadRequest)
 		return
