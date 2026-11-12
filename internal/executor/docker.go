@@ -249,7 +249,8 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	}
 
 	// Read stdout and stderr concurrently using Docker's multiplexed stream.
-	var stdoutBuf, stderrBuf bytes.Buffer
+	// Bound captured output while continuing to consume both streams.
+	var stdoutBuf, stderrBuf limitedOutputBuffer
 	copyDone := make(chan error, 1)
 	go func() {
 		_, err := stdcopy.StdCopy(&stdoutBuf, &stderrBuf, attachResp.Reader)
