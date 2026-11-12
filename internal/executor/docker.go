@@ -81,6 +81,9 @@ func runInDocker(
 	commands [][]string,
 	timeout time.Duration,
 ) ([]commandResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	cli, err := getDockerClient()
 	if err != nil {
 		return nil, err
@@ -166,10 +169,8 @@ func runInDocker(
 		cmdStr := strings.Join(cmd, " ")
 		slog.Debug("running command in container", "id", containerID[:12], "cmd", cmdStr)
 
-		// Each command gets its own timeout context derived from the overall timeout.
-		cmdCtx, cmdCancel := context.WithTimeout(ctx, timeout)
-		result := execInContainer(cmdCtx, cli, containerID, cmd, stdin)
-		cmdCancel()
+		// Container setup and all commands share one deadline.
+		result := execInContainer(ctx, cli, containerID, cmd, stdin)
 
 		results = append(results, result)
 
@@ -260,8 +261,9 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	case <-copyDone:
 		// Normal completion — fall through to inspect exit code.
 	case <-ctx.Done():
-		// Timeout — kill the container so the copy goroutine unblocks.
-		cli.ContainerKill(context.Background(), containerID, "SIGKILL") //nolint:errcheck
+		// Close the connection to unblock output reading.
+		// runInDocker force-removes the container after this returns.
+		attachResp.Close()
 		<-copyDone
 		return commandResult{
 			TimedOut: true,
@@ -274,6 +276,14 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	// Inspect to get exit code.
 	inspectResp, err := cli.ContainerExecInspect(ctx, execID.ID)
 	if err != nil {
+		if ctx.Err() != nil {
+			return commandResult{
+				TimedOut: true,
+				Stdout:   stdoutBuf.String(),
+				Stderr:   "execution timeout",
+				ExitCode: 124,
+			}
+		}
 		return commandResult{
 			ExitCode: 1,
 			Stdout:   stdoutBuf.String(),

@@ -7,6 +7,7 @@ package executor
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -43,7 +44,7 @@ func (e *PythonExecutor) Execute(ctx context.Context, job *models.Job, timeout t
 	)
 	if err != nil {
 		slog.Error("executor: docker error", "job_id", job.ID, "error", err)
-		return Result{Status: models.StatusFailed, ErrorMessage: err.Error()}
+		return dockerFailureResult(err, start)
 	}
 
 	result := interpretResult(results, false /* no compile step */)
@@ -82,7 +83,7 @@ func (e *GoExecutor) Execute(ctx context.Context, job *models.Job, timeout time.
 	)
 	if err != nil {
 		slog.Error("executor: docker error", "job_id", job.ID, "error", err)
-		return Result{Status: models.StatusFailed, ErrorMessage: err.Error()}
+		return dockerFailureResult(err, start)
 	}
 
 	result := interpretResult(results, true /* has compile step */)
@@ -121,7 +122,7 @@ func (e *CppExecutor) Execute(ctx context.Context, job *models.Job, timeout time
 	)
 	if err != nil {
 		slog.Error("executor: docker error", "job_id", job.ID, "error", err)
-		return Result{Status: models.StatusFailed, ErrorMessage: err.Error()}
+		return dockerFailureResult(err, start)
 	}
 
 	result := interpretResult(results, true /* has compile step */)
@@ -160,7 +161,7 @@ func (e *JavaExecutor) Execute(ctx context.Context, job *models.Job, timeout tim
 	)
 	if err != nil {
 		slog.Error("executor: docker error", "job_id", job.ID, "error", err)
-		return Result{Status: models.StatusFailed, ErrorMessage: err.Error()}
+		return dockerFailureResult(err, start)
 	}
 
 	result := interpretResult(results, true /* has compile step */)
@@ -207,4 +208,23 @@ func (r Registry) SupportedLanguages() []string {
 		langs = append(langs, lang)
 	}
 	return langs
+}
+
+// dockerFailureResult classifies errors during container preparation.
+func dockerFailureResult(err error, started time.Time) Result {
+	result := Result{
+		Status:          models.StatusFailed,
+		ExitCode:        1,
+		ErrorMessage:    err.Error(),
+		ExecutionTimeMs: time.Since(started).Milliseconds(),
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		result.Status = models.StatusTimeout
+		result.ExitCode = 124
+		result.Stderr = "job exceeded the execution time limit"
+		result.ErrorMessage = "job timed out during container setup"
+	}
+
+	return result
 }
