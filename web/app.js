@@ -16,7 +16,6 @@
 
 const API_BASE = '';   // same origin
 const POLL_INTERVAL_MS = 500;   // how often we check job status
-const MAX_POLLS = 60;            // max 30 seconds of polling
 
 // Terminal statuses — polling stops when we reach one of these.
 const TERMINAL_STATUSES = new Set([
@@ -92,7 +91,8 @@ public class Main {
 // ============================================================
 
 let currentPollTimer = null;
-let pollCount = 0;
+let pollingVersion = 0;
+let configuredTimeoutSeconds = null;
 
 // ============================================================
 // DOM helpers
@@ -252,6 +252,7 @@ async function submitJob() {
 
   // Reset UI
   stopPolling();
+  const version = pollingVersion;
   setRunning(true);
   setStatus('QUEUED');
   showProgress('Submitting job to server…', 10);
@@ -270,6 +271,7 @@ async function submitJob() {
     });
 
     const data = await res.json();
+    if (version !== pollingVersion) return;
 
     if (!res.ok) {
       throw new Error(data.error || `Server error: ${res.status}`);
@@ -283,11 +285,12 @@ async function submitJob() {
     $('jobLang').textContent = language;
 
     // Start polling for result
-    pollCount = 0;
-    startPolling(jobId);
+    startPolling(jobId, version);
 
   } catch (err) {
-    handleError(err.message || 'Network error — is the server running?');
+    if (version === pollingVersion) {
+      handleError(err.message || 'Network error — is the server running?');
+    }
   }
 }
 
@@ -295,8 +298,8 @@ async function submitJob() {
 // Polling
 // ============================================================
 
-function startPolling(jobId) {
-  currentPollTimer = setTimeout(() => pollJob(jobId), POLL_INTERVAL_MS);
+function startPolling(jobId, version) {
+  currentPollTimer = setTimeout(() => pollJob(jobId, version), POLL_INTERVAL_MS);
 }
 
 function stopPolling() {
@@ -304,20 +307,16 @@ function stopPolling() {
     clearTimeout(currentPollTimer);
     currentPollTimer = null;
   }
-  pollCount = 0;
+  pollingVersion++;
 }
 
-async function pollJob(jobId) {
-  pollCount++;
-
-  if (pollCount > MAX_POLLS) {
-    handleError('Polling timeout — job is taking too long.');
-    return;
-  }
+async function pollJob(jobId, version) {
+  if (version !== pollingVersion) return;
 
   try {
     const res  = await fetch(`${API_BASE}/api/jobs/${jobId}`);
     const job  = await res.json();
+    if (version !== pollingVersion) return;
 
     if (!res.ok) {
       throw new Error(job.error || `Lookup failed: ${res.status}`);
@@ -343,10 +342,12 @@ async function pollJob(jobId) {
     }
 
     // Not done yet — poll again
-    currentPollTimer = setTimeout(() => pollJob(jobId), POLL_INTERVAL_MS);
+    currentPollTimer = setTimeout(() => pollJob(jobId, version), POLL_INTERVAL_MS);
 
   } catch (err) {
-    handleError(err.message);
+    if (version === pollingVersion) {
+      handleError(err.message);
+    }
   }
 }
 
@@ -379,7 +380,9 @@ function displayResult(job) {
       errorLines.push('The code compiled but crashed at runtime. Check stderr for the error.');
     } else if (job.status === 'TIMEOUT') {
       errorLines.push('');
-      errorLines.push('The code exceeded the maximum execution time (10 seconds).');
+      errorLines.push(configuredTimeoutSeconds === null
+        ? 'The job exceeded the configured execution time limit.'
+        : `The job exceeded the execution time limit (${configuredTimeoutSeconds} seconds).`);
       errorLines.push('Check for infinite loops or excessive computation.');
     }
   } else {
@@ -416,19 +419,35 @@ function handleError(message) {
 // Health polling (status bar)
 // ============================================================
 
+function updateRuntimeLabels(data = {}) {
+  const workers = data.worker_count;
+  $('workerBadge').textContent = Number.isInteger(workers) && workers >= 0
+    ? `${workers} ${workers === 1 ? 'Worker' : 'Workers'}`
+    : 'Workers: —';
+
+  const seconds = data.execution_timeout_seconds;
+  configuredTimeoutSeconds = Number.isFinite(seconds) && seconds >= 0
+    ? seconds : null;
+  $('runHint').textContent = 'Runs inside a Docker container' +
+    (configuredTimeoutSeconds === null ? '' : ` · ${configuredTimeoutSeconds}s timeout`);
+}
+
 async function pollHealth() {
   try {
-    const res  = await fetch(`${API_BASE}/api/health`);
+    const res = await fetch(`${API_BASE}/api/health`);
+    if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
     const data = await res.json();
 
-    $('queueLen').textContent  = data.queue_len  ?? '?';
-    $('queueCap').textContent  = data.queue_cap  ?? '?';
+    $('queueLen').textContent = data.queue_len ?? '?';
+    $('queueCap').textContent = data.queue_cap ?? '?';
     $('totalJobs').textContent = data.jobs_total ?? '?';
+    updateRuntimeLabels(data);
 
-    $('serverStatusDot').className  = 'server-dot dot-ok';
+    $('serverStatusDot').className = 'server-dot dot-ok';
     $('serverStatusText').textContent = 'Server online';
   } catch {
-    $('serverStatusDot').className  = 'server-dot dot-error';
+    updateRuntimeLabels();
+    $('serverStatusDot').className = 'server-dot dot-error';
     $('serverStatusText').textContent = 'Server offline';
   }
 }

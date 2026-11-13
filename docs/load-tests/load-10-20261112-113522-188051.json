@@ -1,0 +1,138 @@
+{
+  "recorded_at": "2026-11-12T11:35:22.188051-05:00",
+  "workload": "Python: print, sleep 2 seconds, print; one container per job",
+  "timing_note": "Batch time includes HTTP/polling; job timings use server timestamps. Worker time includes container setup and cleanup.",
+  "summary": {
+    "jobs_submitted": 10,
+    "jobs_successful": 10,
+    "batch_elapsed_seconds": 13.197,
+    "successful_jobs_per_second": 0.758,
+    "peak_overlapping_worker_jobs": 4,
+    "mean_queue_wait_ms": 3625.85,
+    "mean_worker_time_ms": 4471.61,
+    "p95_job_latency_ms": 12881.72
+  },
+  "failed_job_ids": [],
+  "jobs": [
+    {
+      "id": "96bdbf8f-82c4-41a8-8e86-e209980afa5b",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.00809-05:00",
+      "started_at": "2026-11-12T11:35:09.008734-05:00",
+      "finished_at": "2026-11-12T11:35:13.568018-05:00",
+      "stdout": "Job 1 starting\nJob 1 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4559
+    },
+    {
+      "id": "4336d0a1-656d-4138-83c8-b59bf623b700",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.012027-05:00",
+      "started_at": "2026-11-12T11:35:09.012495-05:00",
+      "finished_at": "2026-11-12T11:35:13.822712-05:00",
+      "stdout": "Job 2 starting\nJob 2 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4810
+    },
+    {
+      "id": "8414f64b-ae77-4035-aa71-9c81f7eeb196",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.020857-05:00",
+      "started_at": "2026-11-12T11:35:09.021892-05:00",
+      "finished_at": "2026-11-12T11:35:13.773199-05:00",
+      "stdout": "Job 3 starting\nJob 3 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4751
+    },
+    {
+      "id": "328c7707-5db0-4462-96df-b6b22d5a0e39",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.036325-05:00",
+      "started_at": "2026-11-12T11:35:09.036681-05:00",
+      "finished_at": "2026-11-12T11:35:13.345018-05:00",
+      "stdout": "Job 4 starting\nJob 4 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4308
+    },
+    {
+      "id": "42190328-af84-4e25-9382-a79a508897c3",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.041402-05:00",
+      "started_at": "2026-11-12T11:35:13.345244-05:00",
+      "finished_at": "2026-11-12T11:35:17.65462-05:00",
+      "stdout": "Job 5 starting\nJob 5 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4309
+    },
+    {
+      "id": "a239ea60-f7d4-45c5-84ab-9d85fb6d811c",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.04799-05:00",
+      "started_at": "2026-11-12T11:35:13.56819-05:00",
+      "finished_at": "2026-11-12T11:35:18.415418-05:00",
+      "stdout": "Job 6 starting\nJob 6 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 4847
+    },
+    {
+      "id": "0653ea41-b639-435d-83bf-fec6e15c9953",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.052519-05:00",
+      "started_at": "2026-11-12T11:35:13.773341-05:00",
+      "finished_at": "2026-11-12T11:35:18.86652-05:00",
+      "stdout": "Job 7 starting\nJob 7 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 5093
+    },
+    {
+      "id": "d82091b6-fca3-4af4-9115-b5c0b9fb110b",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.056023-05:00",
+      "started_at": "2026-11-12T11:35:13.822941-05:00",
+      "finished_at": "2026-11-12T11:35:18.882624-05:00",
+      "stdout": "Job 8 starting\nJob 8 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 5059
+    },
+    {
+      "id": "45fdf624-964d-44fc-b515-b01d9f68fd76",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.059505-05:00",
+      "started_at": "2026-11-12T11:35:17.654786-05:00",
+      "finished_at": "2026-11-12T11:35:21.099464-05:00",
+      "stdout": "Job 9 starting\nJob 9 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 3444
+    },
+    {
+      "id": "90aab403-c503-4a3c-9324-b4683c4775ef",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-12T11:35:09.066623-05:00",
+      "started_at": "2026-11-12T11:35:18.415561-05:00",
+      "finished_at": "2026-11-12T11:35:21.948341-05:00",
+      "stdout": "Job 10 starting\nJob 10 done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 3532
+    }
+  ]
+}

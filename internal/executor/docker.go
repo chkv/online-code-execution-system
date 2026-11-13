@@ -28,10 +28,12 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/errdefs"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/keerthivardhanchandana/online-code-execution-system/internal/models"
 )
@@ -47,8 +49,12 @@ type commandResult struct {
 // dockerClient is a lazily-initialized Docker client shared across executors.
 // It is safe for concurrent use by multiple goroutines (confirmed by Docker SDK docs).
 var dockerClient *client.Client
+var dockerClientMu sync.Mutex
 
 func getDockerClient() (*client.Client, error) {
+	dockerClientMu.Lock()
+	defer dockerClientMu.Unlock()
+
 	if dockerClient != nil {
 		return dockerClient, nil
 	}
@@ -75,6 +81,9 @@ func runInDocker(
 	commands [][]string,
 	timeout time.Duration,
 ) ([]commandResult, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
 	cli, err := getDockerClient()
 	if err != nil {
 		return nil, err
@@ -86,7 +95,7 @@ func runInDocker(
 	//   - limited CPU/memory/pids
 	//   - drop all Linux capabilities
 	//   - no new privileges
-	nanoCPUs := int64(5e8) // 0.5 CPU cores
+	nanoCPUs := int64(5e8)             // 0.5 CPU cores
 	memory := int64(128 * 1024 * 1024) // 128 MB
 	pidsLimit := int64(32)
 
@@ -117,21 +126,29 @@ func runInDocker(
 	}
 
 	containerID := resp.ID
-	slog.Debug("container created", "id", containerID[:12], "image", image)
+
+	// Register cleanup immediately, including when startup fails.
+	defer func() {
+		removeCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err := cli.ContainerRemove(removeCtx, containerID, container.RemoveOptions{
+			Force: true,
+		})
+		if err != nil && !errdefs.IsNotFound(err) {
+			slog.Warn("container cleanup failed", "id", containerID, "error", err)
+			return
+		}
+
+		slog.Debug("container cleanup complete", "id", containerID)
+	}()
+
+	slog.Debug("container created", "id", containerID, "image", image)
 
 	// Start the container.
 	if err := cli.ContainerStart(ctx, containerID, container.StartOptions{}); err != nil {
 		return nil, fmt.Errorf("container start failed: %w", err)
 	}
-
-	// Ensure the container is removed when we are done (cleanup).
-	// AutoRemove only triggers when the container exits; we also force-remove
-	// here to handle cases where we kill it before it exits naturally.
-	defer func() {
-		removeCtx := context.Background()
-		cli.ContainerRemove(removeCtx, containerID, container.RemoveOptions{Force: true}) //nolint:errcheck
-		slog.Debug("container removed", "id", containerID[:12])
-	}()
 
 	// --- Upload source code as tar archive ---
 	// Docker's CopyToContainer API requires a tar stream.
@@ -152,10 +169,8 @@ func runInDocker(
 		cmdStr := strings.Join(cmd, " ")
 		slog.Debug("running command in container", "id", containerID[:12], "cmd", cmdStr)
 
-		// Each command gets its own timeout context derived from the overall timeout.
-		cmdCtx, cmdCancel := context.WithTimeout(ctx, timeout)
-		result := execInContainer(cmdCtx, cli, containerID, cmd, stdin)
-		cmdCancel()
+		// Container setup and all commands share one deadline.
+		result := execInContainer(ctx, cli, containerID, cmd, stdin)
 
 		results = append(results, result)
 
@@ -234,7 +249,8 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	}
 
 	// Read stdout and stderr concurrently using Docker's multiplexed stream.
-	var stdoutBuf, stderrBuf bytes.Buffer
+	// Bound captured output while continuing to consume both streams.
+	var stdoutBuf, stderrBuf limitedOutputBuffer
 	copyDone := make(chan error, 1)
 	go func() {
 		_, err := stdcopy.StdCopy(&stdoutBuf, &stderrBuf, attachResp.Reader)
@@ -246,8 +262,9 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	case <-copyDone:
 		// Normal completion — fall through to inspect exit code.
 	case <-ctx.Done():
-		// Timeout — kill the container so the copy goroutine unblocks.
-		cli.ContainerKill(context.Background(), containerID, "SIGKILL") //nolint:errcheck
+		// Close the connection to unblock output reading.
+		// runInDocker force-removes the container after this returns.
+		attachResp.Close()
 		<-copyDone
 		return commandResult{
 			TimedOut: true,
@@ -260,6 +277,14 @@ func execInContainer(ctx context.Context, cli *client.Client, containerID string
 	// Inspect to get exit code.
 	inspectResp, err := cli.ContainerExecInspect(ctx, execID.ID)
 	if err != nil {
+		if ctx.Err() != nil {
+			return commandResult{
+				TimedOut: true,
+				Stdout:   stdoutBuf.String(),
+				Stderr:   "execution timeout",
+				ExitCode: 124,
+			}
+		}
 		return commandResult{
 			ExitCode: 1,
 			Stdout:   stdoutBuf.String(),
