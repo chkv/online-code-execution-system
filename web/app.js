@@ -92,6 +92,7 @@ public class Main {
 
 let currentPollTimer = null;
 let pollingVersion = 0;
+let configuredTimeoutSeconds = null;
 
 // ============================================================
 // DOM helpers
@@ -379,7 +380,9 @@ function displayResult(job) {
       errorLines.push('The code compiled but crashed at runtime. Check stderr for the error.');
     } else if (job.status === 'TIMEOUT') {
       errorLines.push('');
-      errorLines.push('The code exceeded the maximum execution time (10 seconds).');
+      errorLines.push(configuredTimeoutSeconds === null
+        ? 'The job exceeded the configured execution time limit.'
+        : `The job exceeded the execution time limit (${configuredTimeoutSeconds} seconds).`);
       errorLines.push('Check for infinite loops or excessive computation.');
     }
   } else {
@@ -416,19 +419,35 @@ function handleError(message) {
 // Health polling (status bar)
 // ============================================================
 
+function updateRuntimeLabels(data = {}) {
+  const workers = data.worker_count;
+  $('workerBadge').textContent = Number.isInteger(workers) && workers >= 0
+    ? `${workers} ${workers === 1 ? 'Worker' : 'Workers'}`
+    : 'Workers: —';
+
+  const seconds = data.execution_timeout_seconds;
+  configuredTimeoutSeconds = Number.isFinite(seconds) && seconds >= 0
+    ? seconds : null;
+  $('runHint').textContent = 'Runs inside a Docker container' +
+    (configuredTimeoutSeconds === null ? '' : ` · ${configuredTimeoutSeconds}s timeout`);
+}
+
 async function pollHealth() {
   try {
-    const res  = await fetch(`${API_BASE}/api/health`);
+    const res = await fetch(`${API_BASE}/api/health`);
+    if (!res.ok) throw new Error(`Health check failed: ${res.status}`);
     const data = await res.json();
 
-    $('queueLen').textContent  = data.queue_len  ?? '?';
-    $('queueCap').textContent  = data.queue_cap  ?? '?';
+    $('queueLen').textContent = data.queue_len ?? '?';
+    $('queueCap').textContent = data.queue_cap ?? '?';
     $('totalJobs').textContent = data.jobs_total ?? '?';
+    updateRuntimeLabels(data);
 
-    $('serverStatusDot').className  = 'server-dot dot-ok';
+    $('serverStatusDot').className = 'server-dot dot-ok';
     $('serverStatusText').textContent = 'Server online';
   } catch {
-    $('serverStatusDot').className  = 'server-dot dot-error';
+    updateRuntimeLabels();
+    $('serverStatusDot').className = 'server-dot dot-error';
     $('serverStatusText').textContent = 'Server offline';
   }
 }

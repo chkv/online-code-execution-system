@@ -79,7 +79,7 @@ func main() {
 	// --- Phase 4: Set up HTTP server ---
 	// Serve frontend static files from the web/ directory.
 	fs := http.FileServer(http.Dir("web"))
-	handler := api.NewHandler(store, queue, registry)
+	handler := api.NewHandler(store, queue, registry, cfg.WorkerCount, cfg.ExecutionTimeout)
 
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, fs)

@@ -32,14 +32,28 @@ const maxSubmitBodyBytes int64 = 1 << 20 // 1 MiB
 // Passing dependencies explicitly (instead of using globals) makes
 // the code testable — tests can inject mock stores and queues.
 type Handler struct {
-	store    *storage.Store
-	queue    *jobs.Queue
-	registry executor.Registry
+	store            *storage.Store
+	queue            *jobs.Queue
+	registry         executor.Registry
+	workerCount      int
+	executionTimeout time.Duration
 }
 
 // NewHandler creates an API Handler with all required dependencies.
-func NewHandler(s *storage.Store, q *jobs.Queue, reg executor.Registry) *Handler {
-	return &Handler{store: s, queue: q, registry: reg}
+func NewHandler(
+	s *storage.Store,
+	q *jobs.Queue,
+	reg executor.Registry,
+	workerCount int,
+	executionTimeout time.Duration,
+) *Handler {
+	return &Handler{
+		store:            s,
+		queue:            q,
+		registry:         reg,
+		workerCount:      workerCount,
+		executionTimeout: executionTimeout,
+	}
 }
 
 // RegisterRoutes registers all API routes on the given mux.
@@ -217,10 +231,12 @@ func (h *Handler) languagesHandler(w http.ResponseWriter, r *http.Request) {
 // -----------------------------------------------------------------------
 
 type healthResponse struct {
-	Status    string `json:"status"`
-	QueueLen  int    `json:"queue_len"`
-	QueueCap  int    `json:"queue_cap"`
-	JobsTotal int    `json:"jobs_total"`
+	Status                  string  `json:"status"`
+	QueueLen                int     `json:"queue_len"`
+	QueueCap                int     `json:"queue_cap"`
+	JobsTotal               int     `json:"jobs_total"`
+	WorkerCount             int     `json:"worker_count"`
+	ExecutionTimeoutSeconds float64 `json:"execution_timeout_seconds"`
 }
 
 func (h *Handler) healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -229,10 +245,12 @@ func (h *Handler) healthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, healthResponse{
-		Status:    "ok",
-		QueueLen:  h.queue.Len(),
-		QueueCap:  h.queue.Cap(),
-		JobsTotal: h.store.Count(),
+		Status:                  "ok",
+		QueueLen:                h.queue.Len(),
+		QueueCap:                h.queue.Cap(),
+		JobsTotal:               h.store.Count(),
+		WorkerCount:             h.workerCount,
+		ExecutionTimeoutSeconds: h.executionTimeout.Seconds(),
 	})
 }
 

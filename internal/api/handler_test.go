@@ -31,7 +31,7 @@ func setupAPI() (*Handler, *http.ServeMux) {
 	// Just add a dummy executor to pass validation
 	reg["python"] = &mockExecutor{}
 
-	handler := NewHandler(store, queue, reg)
+	handler := NewHandler(store, queue, reg, 4, 10*time.Second)
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux, http.NotFoundHandler())
 	return handler, mux
