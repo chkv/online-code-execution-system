@@ -37,3 +37,5 @@ coverage.out
 *.prof
 bin/
 tmp/
+__pycache__/
+*.py[cod]

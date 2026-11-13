@@ -1,0 +1,72 @@
+{
+  "recorded_at": "2026-11-13T00:04:02.020132-05:00",
+  "test": "queue saturation with one worker and one waiting slot",
+  "base_url": "http://localhost:8081",
+  "health": {
+    "status": "ok",
+    "queue_len": 0,
+    "queue_cap": 1,
+    "jobs_total": 2,
+    "worker_count": 1,
+    "execution_timeout_seconds": 10
+  },
+  "submission_http_statuses": [
+    202,
+    202,
+    429
+  ],
+  "running_job_observed": {
+    "id": "43451a97-ae7f-45dd-8789-69c90670f9c6",
+    "language": "python",
+    "status": "RUNNING",
+    "created_at": "2026-11-13T00:03:55.525007-05:00",
+    "started_at": "2026-11-13T00:03:55.525312-05:00",
+    "finished_at": "0001-01-01T00:00:00Z",
+    "stdout": "",
+    "stderr": "",
+    "exit_code": 0,
+    "execution_time_ms": 0
+  },
+  "queued_job_observed": {
+    "id": "ec02efb8-30f7-4727-b500-da1fc7e06b33",
+    "language": "python",
+    "status": "QUEUED",
+    "created_at": "2026-11-13T00:03:55.53177-05:00",
+    "started_at": "0001-01-01T00:00:00Z",
+    "finished_at": "0001-01-01T00:00:00Z",
+    "stdout": "",
+    "stderr": "",
+    "exit_code": 0,
+    "execution_time_ms": 0
+  },
+  "rejection": {
+    "error": "queue is full, try again later"
+  },
+  "accepted_jobs": [
+    {
+      "id": "43451a97-ae7f-45dd-8789-69c90670f9c6",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-13T00:03:55.525007-05:00",
+      "started_at": "2026-11-13T00:03:55.525312-05:00",
+      "finished_at": "2026-11-13T00:04:00.848015-05:00",
+      "stdout": "first done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 5322
+    },
+    {
+      "id": "ec02efb8-30f7-4727-b500-da1fc7e06b33",
+      "language": "python",
+      "status": "COMPLETED",
+      "created_at": "2026-11-13T00:03:55.53177-05:00",
+      "started_at": "2026-11-13T00:04:00.848238-05:00",
+      "finished_at": "2026-11-13T00:04:02.011852-05:00",
+      "stdout": "second done\n",
+      "stderr": "",
+      "exit_code": 0,
+      "execution_time_ms": 1163
+    }
+  ],
+  "passed": true
+}

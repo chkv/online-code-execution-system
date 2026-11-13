@@ -69,3 +69,7 @@ execution completes successfully within its configured budget.
 - [load-10-20261112-113522-188051.json](load-tests/load-10-20261112-113522-188051.json)
 - [load-25-20261112-113641-799346.json](load-tests/load-25-20261112-113641-799346.json)
 - [load-50-20261112-113833-329229.json](load-tests/load-50-20261112-113833-329229.json)
+
+## Final verification evidence
+
+The isolated queue test, corrected runtime sandbox probe, and post-seccomp four-language check passed. Their scope and raw evidence are in [Final verification](FINAL_VERIFICATION.md).

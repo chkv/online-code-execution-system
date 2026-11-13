@@ -1,35 +1,13 @@
 # Presentation Outline
 
-## 1. Introduction (2 mins)
-- Introduce the "Online Code Execution System"
-- Explain the problem: Running untrusted code securely while supporting multiple users simultaneously.
-- Mention the key technologies: Go, Docker, HTML/JS/CSS.
+Adjust the length to the professor's final instructions. Suggested duration: 8–10 minutes, excluding questions.
 
-## 2. Live Demonstration (3 mins)
-- Open the web interface.
-- **Demo 1 (Basic):** Write a simple Python "Hello World" and run it. Show the fast execution.
-- **Demo 2 (Concurrency):** Run the `scripts/demo_concurrency.sh` script in the terminal. Switch back to the UI or logs to show multiple workers processing the jobs at the exact same time.
-- **Demo 3 (Errors & Timeouts):** Run a C++ program with a syntax error to show compiler output. Run a Python infinite loop to show the 10-second timeout enforcement.
+1. **Problem and goal:** Run programs in four languages and return useful results; introduce the team and local Go/Docker setup.
+2. **Live workflow:** Submit Python with stdin, show the result, and explain queued/running/terminal status polling.
+3. **Architecture:** Browser, HTTP handlers, buffered channel, worker goroutines, snapshot store, and per-job Docker containers.
+4. **Concurrency:** Explain channel ownership, independent job snapshots, RWMutex, and the race detector. Demonstrate overlapping worker jobs.
+5. **Execution controls:** Explain the shared deadline, container restrictions, syscall filtering, and input/output size limits. Show one error or timeout.
+6. **Measured results:** Present the 10/25/50-job table from final-report.md, the 85/85 successful jobs, the observed peak of four overlapping worker jobs, and the final four-language check.
+7. **Limitations and learning:** Explain in-memory history, local environment dependence, and the limited scope of security testing. Invite questions.
 
-## 3. Architecture & Concurrency (4 mins)
-- Show the architecture diagram (from `docs/architecture.md`).
-- Explain the **Single Binary** approach.
-- **The Job Queue:** Explain how Go channels act as the queue.
-- **The Worker Pool:** Explain goroutines. "We have 4 workers running in parallel, taking jobs from the channel."
-- **Synchronization:** Explain the data race problem (API reading status while worker updates it) and how `sync.RWMutex` solves it. Mention that we verified this with the Go Race Detector.
-
-## 4. Security & Sandboxing (3 mins)
-- Explain why running `system("rm -rf /")` on the host server is bad.
-- Explain the Docker Sandboxing approach:
-  - Ephemeral containers (created and destroyed per job).
-  - No network access.
-  - Dropped Linux capabilities.
-  - Resource limits (CPU/Memory).
-  
-## 5. Design Choices & Inspirations (2 mins)
-- Mention "Judex", the open-source reference project.
-- Explain how we simplified the architecture for this course (e.g., removing Redis in favor of Go channels, using a unified binary instead of microservices).
-- Why this is a better fit for an educational demonstration.
-
-## 6. Q&A (1 min)
-- Open the floor for questions from the professor and peers.
+Suggested speaking split: introduction/demo; concurrency; Docker/limits; results/limitations. Agree on the actual speakers as a team rather than treating this as a record of individual contributions.

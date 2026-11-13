@@ -121,3 +121,7 @@ All project documentation is located in the `docs/` directory:
 - [Verified Testing Summary](docs/testing-summary.md)
 - [Final Report](docs/final-report.md)
 - [Student Explanation Guide](docs/student-explanation-guide.md)
+
+## Final verification evidence
+
+The queue rejection, runtime sandbox, and four-language checks are recorded in [Final verification](docs/FINAL_VERIFICATION.md). See [Demo guide](docs/demo-guide.md), [Final report](docs/final-report.md), and [Presentation outline](docs/presentation-outline.md).

@@ -1,27 +1,27 @@
-# Presentation Script
+# Presentation Speaking Notes
 
-**[Slide 1: Title]**
-"Hello everyone, I'm the lead engineer for the Online Code Execution System. Today I'm going to show you a platform we built that allows users to submit code in multiple languages, and executes it securely in the cloud."
+## Introduction
 
-**[Slide 2: The Problem]**
-"Building a code execution engine is hard for two reasons. First, security: users can submit malicious code like infinite loops or scripts that try to delete system files. Second, concurrency: if 50 students submit code at the exact same time, the system needs to process them without locking up."
+Our project is an Online Code Execution System built with Go. A user selects Python, Go, C++, or Java, enters code and optional input, and receives the execution result. The version we are demonstrating runs locally using Docker Desktop.
 
-**[Slide 3: Live Demo]**
-"Let's look at the system in action. *(Open the web app)*. Here is our frontend. I'll write a quick Python script to print a message. When I click Run, the frontend sends it to our Go backend, which queues it, executes it, and streams the result back. 
-Now, let's look at concurrency. I'm going to run a script that submits 5 jobs simultaneously. Notice in the logs how our worker pool processes them in parallel."
+## Submission and results
 
-**[Slide 4: Architecture - Concurrency]**
-"How did we build this? The entire backend is written in Go.
-When a request comes in, we put it into a Go 'Channel'. This acts as our Job Queue.
-We then have a Worker Pool—a set of goroutines running in parallel. They sit in a loop, pulling jobs from the channel.
-Because multiple workers are updating job statuses while the API is reading them, we had to prevent data races. We did this using a `sync.RWMutex`, which we rigorously tested using Go's built-in Race Detector."
+When we click Run, the frontend sends an HTTP request to the Go server. The server returns a job ID after accepting the job into the queue. The browser polls that ID for status. Output appears when the result is available; this is polling, not live output streaming.
 
-**[Slide 5: Architecture - Security]**
-"To solve the security problem, we don't run the code directly on the server. Instead, our Go backend talks directly to the Docker daemon. For every single job, it spins up a brand new, isolated Docker container.
-We strip this container of all network access, drop its Linux capabilities so it can't escalate privileges, and hard-limit the CPU and RAM. After 10 seconds, if the code is still running—like an infinite loop—we kill the container automatically."
+## Concurrency
 
-**[Slide 6: Inspirations]**
-"We were inspired by open-source systems like 'Judex', which use Redis and microservices. However, we intentionally simplified the design into a single binary using Go's native channels and mutexes. This makes the system much easier to deploy and perfectly demonstrates the core concurrency concepts we learned in this course."
+The normal server has four worker goroutines and a buffered channel with 100 waiting slots. Each worker takes a job, executes it, and stores its result. When the queue is full, a new submission receives HTTP 429. In our isolated one-slot test, one job ran, another waited, and the third was rejected. Both accepted jobs still finished correctly.
 
-**[Slide 7: Conclusion]**
-"In conclusion, we successfully built a secure, highly concurrent code execution system from scratch. Thank you, and I'd be happy to answer any questions."
+The job store uses an RWMutex and independent job snapshots. This matters because protecting the map alone would not prevent a caller from modifying a shared job pointer after the lock was released. We also synchronized Docker client initialization and ran the Go race tests.
+
+## Docker and deadlines
+
+Each job gets a fresh container. We configure no external network attachment, non-root execution through the language images, dropped capabilities, no-new-privileges, and CPU, memory, and process limits. We enabled Docker's built-in seccomp profile and checked its active mode inside a submitted Python job. These are verified restrictions, not a claim that containers cannot be escaped.
+
+The normal ten-second deadline includes container setup, compilation, and execution. Time waiting in the queue is separate. A timeout ends the job and triggers cleanup. Oversized request bodies are rejected, and captured output is bounded so a printing loop cannot keep growing the output buffers indefinitely.
+
+## Results and lessons
+
+All four final language checks completed after syscall filtering was enabled. The measured Python batches of 10, 25, and 50 jobs all succeeded, for 85 successful jobs overall. The highest observed overlap was four worker jobs. These programs included a two-second sleep, so we present the numbers as measurements of that workload on this machine, not a general CPU benchmark.
+
+One important fix was warming the Go standard-library build cache while building the image. We also learned that Docker availability and startup delays affect the shared execution deadline. The application now demonstrates the complete workflow, while persistence, user authentication, and broader security testing remain future work. We can use the saved reports to explain the results during questions.

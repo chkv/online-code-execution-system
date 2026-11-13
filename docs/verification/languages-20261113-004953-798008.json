@@ -1,0 +1,84 @@
+{
+  "recorded_at": "2026-11-13T00:49:53.798008-05:00",
+  "test": "four-language smoke test after enabling Docker builtin seccomp",
+  "base_url": "http://localhost:8081",
+  "health": {
+    "status": "ok",
+    "queue_len": 0,
+    "queue_cap": 1,
+    "jobs_total": 8,
+    "worker_count": 1,
+    "execution_timeout_seconds": 10
+  },
+  "docker_security_options": [
+    "name=seccomp,profile=builtin",
+    "name=cgroupns"
+  ],
+  "results": [
+    {
+      "language": "python",
+      "passed": true,
+      "job": {
+        "id": "b498e555-3566-418e-9ba0-a79bb17e3abe",
+        "language": "python",
+        "status": "COMPLETED",
+        "created_at": "2026-11-13T00:49:37.930872-05:00",
+        "started_at": "2026-11-13T00:49:37.931904-05:00",
+        "finished_at": "2026-11-13T00:49:39.24628-05:00",
+        "stdout": "hello python\n",
+        "stderr": "",
+        "exit_code": 0,
+        "execution_time_ms": 1314
+      }
+    },
+    {
+      "language": "go",
+      "passed": true,
+      "job": {
+        "id": "6ff89416-dee5-46f5-a393-111d6e8fbaac",
+        "language": "go",
+        "status": "COMPLETED",
+        "created_at": "2026-11-13T00:49:39.378234-05:00",
+        "started_at": "2026-11-13T00:49:39.378474-05:00",
+        "finished_at": "2026-11-13T00:49:44.363353-05:00",
+        "stdout": "hello go\n",
+        "stderr": "",
+        "exit_code": 0,
+        "execution_time_ms": 4984
+      }
+    },
+    {
+      "language": "cpp",
+      "passed": true,
+      "job": {
+        "id": "17694254-1f60-4947-8ea7-9d243976fdb9",
+        "language": "cpp",
+        "status": "COMPLETED",
+        "created_at": "2026-11-13T00:49:44.524151-05:00",
+        "started_at": "2026-11-13T00:49:44.524417-05:00",
+        "finished_at": "2026-11-13T00:49:47.712713-05:00",
+        "stdout": "hello cpp\n",
+        "stderr": "",
+        "exit_code": 0,
+        "execution_time_ms": 3188
+      }
+    },
+    {
+      "language": "java",
+      "passed": true,
+      "job": {
+        "id": "64b6cdcd-732d-4c0c-a0eb-a93bd0f01570",
+        "language": "java",
+        "status": "COMPLETED",
+        "created_at": "2026-11-13T00:49:47.835869-05:00",
+        "started_at": "2026-11-13T00:49:47.836159-05:00",
+        "finished_at": "2026-11-13T00:49:53.740778-05:00",
+        "stdout": "hello java\n",
+        "stderr": "",
+        "exit_code": 0,
+        "execution_time_ms": 5904
+      }
+    }
+  ],
+  "passed": true
+}

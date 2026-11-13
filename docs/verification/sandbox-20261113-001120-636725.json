@@ -1,0 +1,84 @@
+{
+  "recorded_at": "2026-11-13T00:11:20.636725-05:00",
+  "test": "runtime restrictions inside an API-submitted Python job",
+  "scope": "Inspects identity, network interfaces, capabilities, and kernel cgroup settings. Does not stress-test resource exhaustion or test sandbox escapes.",
+  "base_url": "http://localhost:8081",
+  "health": {
+    "status": "ok",
+    "queue_len": 0,
+    "queue_cap": 1,
+    "jobs_total": 6,
+    "worker_count": 1,
+    "execution_timeout_seconds": 10
+  },
+  "job": {
+    "id": "8730717f-ce72-48da-b672-a227feb0638e",
+    "language": "python",
+    "status": "COMPLETED",
+    "created_at": "2026-11-13T00:11:19.191519-05:00",
+    "started_at": "2026-11-13T00:11:19.191923-05:00",
+    "finished_at": "2026-11-13T00:11:20.502376-05:00",
+    "stdout": "{\"uid\": 1000, \"euid\": 1000, \"interfaces\": [\"ip6tnl0\", \"lo\", \"tunl0\"], \"process_status\": {\"CapPrm\": \"0000000000000000\", \"CapEff\": \"0000000000000000\", \"CapBnd\": \"0000000000000000\", \"NoNewPrivs\": \"1\", \"Seccomp\": \"0\"}, \"cgroup_files\": {\"memory_v2\": \"134217728\", \"cpu_v2\": \"50000 100000\", \"pids_v2\": \"32\", \"memory_v1\": null, \"quota_v1\": null, \"period_v1\": null, \"quota_v1_alt\": null, \"period_v1_alt\": null, \"pids_v1\": null}}\n",
+    "stderr": "",
+    "exit_code": 0,
+    "execution_time_ms": 1310
+  },
+  "probe": {
+    "uid": 1000,
+    "euid": 1000,
+    "interfaces": [
+      "ip6tnl0",
+      "lo",
+      "tunl0"
+    ],
+    "process_status": {
+      "CapPrm": "0000000000000000",
+      "CapEff": "0000000000000000",
+      "CapBnd": "0000000000000000",
+      "NoNewPrivs": "1",
+      "Seccomp": "0"
+    },
+    "cgroup_files": {
+      "memory_v2": "134217728",
+      "cpu_v2": "50000 100000",
+      "pids_v2": "32",
+      "memory_v1": null,
+      "quota_v1": null,
+      "period_v1": null,
+      "quota_v1_alt": null,
+      "period_v1_alt": null,
+      "pids_v1": null
+    }
+  },
+  "observed": {
+    "uid": 1000,
+    "euid": 1000,
+    "network_interfaces": [
+      "ip6tnl0",
+      "lo",
+      "tunl0"
+    ],
+    "memory_limit_bytes": 134217728,
+    "cpu_limit_cores": 0.5,
+    "process_limit": 32,
+    "process_status": {
+      "CapPrm": "0000000000000000",
+      "CapEff": "0000000000000000",
+      "CapBnd": "0000000000000000",
+      "NoNewPrivs": "1",
+      "Seccomp": "0"
+    }
+  },
+  "checks": {
+    "Non-root real and effective UID": true,
+    "Only the loopback network interface exists": false,
+    "Effective capabilities are empty": true,
+    "Permitted capabilities are empty": true,
+    "Capability bounding set is empty": true,
+    "No-new-privileges is enabled": true,
+    "Memory cgroup limit is 128 MiB": true,
+    "CPU cgroup quota is 0.5 cores": true,
+    "Process/thread cgroup limit is 32": true
+  },
+  "passed": false
+}

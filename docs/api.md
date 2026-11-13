@@ -66,7 +66,7 @@ Retrieves the current status and results of a submitted job.
 ---
 
 ## 3. List Recent Jobs
-Returns up to the 50 most recent jobs.
+Returns up to 50 stored jobs. Ordering is not guaranteed.
 
 **Endpoint:** `GET /api/jobs`
 
@@ -120,3 +120,12 @@ Returns the current health and queue metrics of the server.
   "jobs_total": 42
 }
 ```
+
+## Current limits and health fields
+
+- POST /api/jobs accepts a single JSON value with a total body limit of 1 MiB, including whitespace. Oversized bodies receive HTTP 413; malformed input receives HTTP 400.
+- A full queue receives HTTP 429. The implementation retains a failed internal job record for the rejected submission; the rejection response does not return a job ID.
+- Captured stdout and stderr are limited to 1 MiB each per command. A truncation notice occupies part of that limit. Truncation alone does not make an otherwise successful job fail.
+- GET /api/health also returns worker_count and execution_timeout_seconds. These describe server configuration. Health success does not prove that Docker is available.
+- The ten-second default deadline covers setup, compilation, and execution, excluding queue waiting. Cleanup can add time beyond that deadline.
+- Example response values above are illustrative; list and language ordering should not be assumed.
